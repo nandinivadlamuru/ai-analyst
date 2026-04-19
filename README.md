@@ -4,6 +4,15 @@ Take-home submission: a **grounded** question-answering tool over your own files
 
 **Sample corpus:** 5 Markdown documents + 2 CSV tables under `data/sample/`.
 
+**At a glance**
+
+| Goal | Section |
+|------|---------|
+| Install Python deps + optional Ollama | [Quick start](#quick-start) |
+| Ask one question from the terminal | [Run the CLI to ask one question](#run-the-cli-to-ask-one-question) |
+| Run the eval set and read accuracy (`X/15`) | [Run the evaluation harness](#run-the-evaluation-harness) |
+| Open the interactive web UI | [Run Streamlit](#run-streamlit) |
+
 ---
 
 ## Submission instructions (assessment §6)
@@ -13,22 +22,32 @@ The take-home **§6 Submission instructions** are met as follows.
 | Instruction | How this repo satisfies it |
 |---------------|----------------------------|
 | **1. Organize your code in a clean directory structure** | Installable package under `src/grounded_analyst/`, sample data under `data/sample/`, evaluation assets under `eval/`, and project config at the root (`pyproject.toml`, optional `Dockerfile`, `.env.example`). See [Project layout](#project-layout). |
-| **2. Include a README.md with setup steps** | [Quick start](#quick-start): Python venv, `pip install -e .`, and optional Ollama + `.env`. |
+| **2. Include a README.md with setup steps** | [Quick start](#quick-start) (venv, install, optional Ollama), then [Run the CLI](#run-the-cli-to-ask-one-question), [Run the evaluation harness](#run-the-evaluation-harness), and [Run Streamlit](#run-streamlit). |
 | **3. Architectural choices (why you chose specific libraries / models)** | [Architecture](#architecture) (pipeline and flow) and [Technology choices](#technology-choices) (library and model rationale in table form). |
-| **4. A summary of your evaluation results** | [Evaluation](#evaluation): methodology, latest score (**15 / 15** on the bundled corpus with Ollama available), how to regenerate `eval/results.json`. |
-| **5. Provide the evaluation set in a separate file *or* clearly within the documentation** | **Separate file (primary):** `eval/eval_set.json` — 15 questions, each with `expected_answer_contains`. **In this README:** summarized under [Evaluation](#evaluation) with file path and link to reproducible CLI command. |
+| **4. A summary of your evaluation results** | [Evaluation results summary](#evaluation-results-summary): methodology, latest score, how to regenerate `eval/results.json`. |
+| **5. Provide the evaluation set in a separate file *or* clearly within the documentation** | **Separate file:** [`eval/eval_set.json`](eval/eval_set.json) — 15 questions with `expected_answer_contains`. Described under [Evaluation results summary](#evaluation-results-summary) and used when you [run the evaluation harness](#run-the-evaluation-harness). |
 
-**Suggested reviewer workflow**
+**Suggested reviewer workflow (copy-paste)**
 
 ```bash
+cd /path/to/labfox-AI   # repository root
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -e .
-ollama pull llama3.2:3b && ollama serve                # recommended for refined answers
+
+# Recommended for scores matching the README summary:
+ollama pull llama3.2:3b && ollama serve
+
+# Terminal 2 — single question:
+grounded-analyst ask --data-dir data/sample --question "What is the revenue for North in Q2-2025?"
+
+# Terminal 2 — accuracy / eval harness:
 grounded-analyst evaluate \
   --data-dir data/sample \
   --eval-file eval/eval_set.json \
   --out eval/results.json
-# Optional: streamlit run src/grounded_analyst/ui.py
+
+# Terminal 2 — interactive UI:
+streamlit run src/grounded_analyst/ui.py
 ```
 
 ---
@@ -67,6 +86,64 @@ OLLAMA_URL=http://localhost:11434/api/generate
 ```
 
 If Ollama is unreachable, the system still runs using **extractive grounded fallback** (verbatim excerpt + citation), not free-form hallucination.
+
+---
+
+## Run the CLI to ask one question
+
+From the **repository root**, with the venv activated (`source .venv/bin/activate`):
+
+```bash
+grounded-analyst ask \
+  --data-dir data/sample \
+  --question "What is the revenue for North in Q2-2025?"
+```
+
+**Optional:** restrict retrieval to documents or tables only:
+
+```bash
+grounded-analyst ask \
+  --data-dir data/sample \
+  --question "What quarterly innovation budget was approved?" \
+  --source-types document
+```
+
+Use comma-separated values for `--source-types`, e.g. `document`, `table`, or `document,table`.
+
+---
+
+## Run the evaluation harness
+
+**Evaluation set file:** [`eval/eval_set.json`](eval/eval_set.json) — 15 questions; each row has `question` and `expected_answer_contains` (a substring the answer must include after normalization).
+
+**Run the harness** (writes a JSON report and prints pass count):
+
+```bash
+grounded-analyst evaluate \
+  --data-dir data/sample \
+  --eval-file eval/eval_set.json \
+  --out eval/results.json
+```
+
+**Read the score:** the terminal shows `Eval: X/15 passed`. Open **`eval/results.json`** for per-question `answer`, `citations`, `pass`, and `clarification_requested`.
+
+**Pass rule:** substring match on the model answer vs. `expected_answer_contains` (case-insensitive; commas stripped; whitespace collapsed). Implemented in `evaluator.py`.
+
+This is how you **measure accuracy** on the bundled questions: compare `passed` vs. `total` and inspect each row’s `pass` field in `eval/results.json`.
+
+**Note:** With **`ollama serve`** and **`llama3.2:3b`** available, expect **15 / 15** on this corpus (see [Evaluation results summary](#evaluation-results-summary)). Without Ollama, extractive fallback may change wording slightly; re-run after starting Ollama if scores differ.
+
+---
+
+## Run Streamlit
+
+From the **repository root**, with the venv activated and dependencies installed (`pip install -e .`):
+
+```bash
+streamlit run src/grounded_analyst/ui.py
+```
+
+Open the URL Streamlit prints (typically **`http://localhost:8501`**). Submit a question; the UI mirrors the same answer string as the CLI / eval JSON in expanders.
 
 ---
 
@@ -113,55 +190,17 @@ flowchart LR
 
 ---
 
-## Usage
+## Evaluation results summary
 
-### CLI: single question
-
-```bash
-grounded-analyst ask \
-  --data-dir data/sample \
-  --question "What is the revenue for North in Q2-2025?"
-```
-
-Optional **source filter** (`document` / `table`):
-
-```bash
-grounded-analyst ask \
-  --data-dir data/sample \
-  --question "What quarterly innovation budget was approved?" \
-  --source-types document
-```
-
-### CLI: evaluation
-
-```bash
-grounded-analyst evaluate \
-  --data-dir data/sample \
-  --eval-file eval/eval_set.json \
-  --out eval/results.json
-```
-
-### Streamlit UI
-
-```bash
-streamlit run src/grounded_analyst/ui.py
-```
-
-Open the printed URL (usually `http://localhost:8501`). The UI shows a concise headline plus an expander with the **full same string** as CLI/eval JSON.
-
----
-
-## Evaluation
-
-- **Questions:** `eval/eval_set.json` (15 items: docs, tables, mixed, one insufficient-evidence case).
-- **Mechanism:** Each answer must contain the expected substring (case-insensitive, commas normalized).
-- **Latest run** (representative, with Ollama available):
+- **Eval questions file:** [`eval/eval_set.json`](eval/eval_set.json) — 15 items (documents, tables, mixed, one *insufficient evidence* case).
+- **Scoring:** each run must produce an answer containing the expected substring (see [Run the evaluation harness](#run-the-evaluation-harness)).
+- **Representative run** (Ollama available with `llama3.2:3b`):
 
   - **Chunks indexed:** 21  
   - **Score:** **15 / 15** passed  
-  - **Artifact:** `eval/results.json` (regenerate locally with the command above)
+  - **Report artifact:** regenerate with `grounded-analyst evaluate ...` → `eval/results.json`
 
-Inspect `eval/results.json` for per-question answers, citations, and `clarification_requested`.
+Inspect `eval/results.json` after a run for full details.
 
 ---
 
@@ -230,7 +269,7 @@ Maps to the assessment **minimum expectations** (ingestion, retrieval, grounding
 - **Grounded generation:** evidence-only answers; Ollama + extractive fallback (`grounding.py`).  
 - **Citations:** filename + locator on supported answers.  
 - **Fallback:** insufficient evidence + clarification for vague queries.  
-- **Evaluation set:** `eval/eval_set.json` + summarized results in [Evaluation](#evaluation).
+- **Evaluation set:** `eval/eval_set.json` + summarized results in [Evaluation results summary](#evaluation-results-summary).
 
 ---
 

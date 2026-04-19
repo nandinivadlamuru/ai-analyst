@@ -1,0 +1,145 @@
+Metadata-Version: 2.4
+Name: grounded-multimodal-analyst
+Version: 0.1.0
+Summary: Grounded QA over mixed documents and tables with citations.
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: pandas>=2.2.2
+Requires-Dist: openpyxl>=3.1.5
+Requires-Dist: pypdf>=4.3.1
+Requires-Dist: python-docx>=1.1.2
+Requires-Dist: scikit-learn>=1.5.1
+Requires-Dist: numpy>=1.26.4
+Requires-Dist: python-dotenv>=1.0.1
+Requires-Dist: streamlit>=1.39.0
+
+# Grounded Multi-Modal AI Analyst
+
+This project implements a focused grounded QA system over mixed file types:
+- Unstructured docs: PDF, DOCX, Markdown, TXT
+- Structured tables: CSV, XLSX/XLS
+
+Every answer is generated from retrieved evidence and accompanied by source citations (`filename + page/section/row`).
+
+## 1) Setup
+
+### Prerequisites
+- Python 3.10+
+
+### Install
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
+
+### Optional LLM configuration (Ollama local)
+This project now uses Ollama by default with `llama3.2:3b`.
+
+1) Install Ollama and pull a model:
+```bash
+ollama pull llama3.2:3b
+```
+
+2) Start Ollama server (if not already running):
+```bash
+ollama serve
+```
+
+3) Optional `.env` override:
+```bash
+cp .env.example .env
+# then edit .env
+```
+
+Example `.env` values:
+```env
+OLLAMA_MODEL=llama3.2:3b
+OLLAMA_URL=http://localhost:11434/api/generate
+```
+
+If Ollama is unavailable, the app falls back to extractive grounded mode and still enforces citation/fallback behavior.
+
+## 2) Project Structure
+
+```text
+src/grounded_analyst/
+  ingestion.py      # parse docs/tables into evidence chunks
+  retrieval.py      # TF-IDF retrieval across all chunks
+  grounding.py      # grounded answer generation + insufficient-evidence logic
+  pipeline.py       # orchestration
+  evaluator.py      # evaluation runner
+  cli.py            # command-line interface
+
+data/sample/        # demo multimodal corpus
+eval/eval_set.json  # 12-question evaluation set
+```
+
+## 3) Architecture Choices
+
+- **Ingestion pipeline**:
+  - PDF: per-page extraction (`pypdf`)
+  - DOCX: paragraph extraction (`python-docx`)
+  - Markdown/TXT: plain text parsing
+  - CSV/XLSX: row-wise normalization (`pandas`) with `sheet` and `row` metadata
+- **Retrieval layer**:
+  - Unified text index using TF-IDF bi-grams (`scikit-learn`)
+  - Returns top-k relevant chunks regardless of source type
+- **Grounded generation**:
+  - LLM receives only retrieved evidence and strict instructions to avoid unsupported claims
+  - Returns "Insufficient evidence in the provided corpus." when context is missing
+- **Citations**:
+  - Every response includes references such as:
+    - `company_overview.md (section 1)`
+    - `quarterly_metrics.csv (sheet Sheet1, row 3)`
+
+## 4) Usage
+
+### Ask one question
+```bash
+grounded-analyst ask \
+  --data-dir data/sample \
+  --question "What was North region revenue in Q2-2025?"
+```
+
+### Run evaluation
+```bash
+grounded-analyst evaluate \
+  --data-dir data/sample \
+  --eval-file eval/eval_set.json \
+  --out eval/results.json
+```
+
+### Minimal Web UI (Streamlit)
+```bash
+streamlit run src/grounded_analyst/ui.py
+```
+Then open the local URL shown in terminal (usually `http://localhost:8501`).
+
+## 5) Evaluation Set
+
+The evaluation file includes 12 predefined questions with expected answer snippets, including:
+- factual doc-only questions
+- numeric table-only questions
+- cross-source reasoning (policy threshold + spend table)
+- one explicit insufficient-evidence question
+
+See `eval/eval_set.json`.
+
+## 6) Evaluation Results Summary
+
+Run the command above to produce `eval/results.json`.
+
+Example output format:
+- pass/fail per question
+- generated answer
+- citations used
+- aggregate score (`passed/total`)
+
+## 7) Notes and Extensions
+
+Potential bonus improvements:
+- add reranking and metadata filters (source type, sheet, date)
+- add table-aware reasoning for aggregations and comparisons
+- add Streamlit UI for interactive exploration
+- add Dockerfile and structured logging/tracing

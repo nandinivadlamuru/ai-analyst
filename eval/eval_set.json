@@ -1,0 +1,62 @@
+[
+  {
+    "question": "In which quarter and year was the analyst pilot launched?",
+    "expected_answer_contains": "Q1 2025"
+  },
+  {
+    "question": "Which region was part of the initial pilot along with North?",
+    "expected_answer_contains": "West"
+  },
+  {
+    "question": "What is the target reduction in turnaround time?",
+    "expected_answer_contains": "25 percent"
+  },
+  {
+    "question": "What quarterly innovation budget was approved?",
+    "expected_answer_contains": "120000"
+  },
+  {
+    "question": "At what monthly spend does leadership approval become required?",
+    "expected_answer_contains": "10000"
+  },
+  {
+    "question": "Governance rules say leadership sign-off applies when monthly spend exceeds 10000 USD. In spend_tracker.csv, which month has Training spend of 12000 USD?",
+    "expected_answer_contains": "2025-02"
+  },
+  {
+    "question": "Operations escalation rules say that if incidents in a region exceed 12 in a quarter, assign a remediation lead. How many incidents did West record in Q1-2025 in quarterly_metrics.csv?",
+    "expected_answer_contains": "14"
+  },
+  {
+    "question": "Monthly leadership sign-off is required above a stated USD spend limit in governance policy. For Infrastructure in 2025-08 in spend_tracker.csv, what is SpendUSD, and does it exceed that limit?",
+    "expected_answer_contains": "10200"
+  },
+  {
+    "question": "What is the revenue for North in Q2-2025?",
+    "expected_answer_contains": "238000"
+  },
+  {
+    "question": "What is the revenue for West in Q1-2025?",
+    "expected_answer_contains": "180000"
+  },
+  {
+    "question": "What is the turnaround time for North in Q3-2025?",
+    "expected_answer_contains": "5"
+  },
+  {
+    "question": "Which risk ID is associated with incomplete data feeds?",
+    "expected_answer_contains": "R-02"
+  },
+  {
+    "question": "What mitigation is defined for risk R-07?",
+    "expected_answer_contains": "KPI dictionary"
+  },
+  {
+    "question": "The program overview targeted two regions at first. What is North region revenue in Q4-2025 in quarterly_metrics.csv?",
+    "expected_answer_contains": "259000"
+  },
+  {
+    "question": "What is the headquarters address of LabFox AI?",
+    "expected_answer_contains": "Insufficient evidence"
+  }
+]

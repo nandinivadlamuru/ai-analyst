@@ -1,0 +1,2 @@
+[console_scripts]
+grounded-analyst = grounded_analyst.cli:main
